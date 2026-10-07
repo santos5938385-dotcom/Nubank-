@@ -1,0 +1,1943 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-black">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#000000">
+    <meta name="display" content="standalone">
+    <title>Nubank - Aplicativo Oficial Simulador</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Leitor de QR Code e códigos de barras (QR, ITF, CODE_128, EAN etc.) -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
+    <!-- Captura somente a área do comprovante para compartilhamento como imagem -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        nu: {
+                            purple: '#820AD1',
+                            purpleDark: '#6C08B1',
+                            purpleLight: '#A238FF',
+                            bg: '#000000',
+                            card: '#121212',
+                            cardHover: '#1A1A1A',
+                            textMuted: '#A1A1A6',
+                            green: '#27C86A'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Graphik', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Desativa barras de rolagem mas mantém comportamento de scroll */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .nu-btn-active:active { transform: scale(0.95); opacity: 0.85; }
+        input:focus { outline: none; }
+        .user-select-none { user-select: none; -webkit-user-select: none; }
+        .scanner-reader video { width: 100% !important; height: 310px !important; object-fit: cover; border-radius: 1rem; background: #000; }
+        .scanner-reader #reader__dashboard_section { display: none !important; }
+        .scanner-reader img { max-width: 100%; }
+    </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body class="h-full w-full bg-black text-white font-sans antialiased overflow-x-hidden user-select-none" style="min-height:100dvh; min-height:100svh;">
+<script>
+(function(){
+  // Em ambientes que já permitem modo imersivo/standalone, aproveita o viewport inteiro.
+  // Navegadores móveis comuns bloqueiam fullscreen automático sem gesto do usuário.
+  function tryImmersive(){
+    const el = document.documentElement;
+    const inFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+    const standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+    if (inFullscreen || standalone) document.body.style.minHeight='100dvh';
+  }
+  window.addEventListener('load', tryImmersive, {once:true});
+  window.addEventListener('pageshow', tryImmersive, {once:true});
+})();
+</script>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-container" class="min-h-full w-full max-w-2xl mx-auto bg-black flex flex-col justify-between relative shadow-2xl pb-20">
+
+        <!-- HEADER ROXO NUBANK -->
+        <header class="bg-nu-purple px-5 pt-8 pb-6 flex flex-col justify-between">
+            <div class="flex justify-between items-center mb-6">
+                <!-- User Profile / Settings Button -->
+                <div onclick="openProfileModal()" class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center cursor-pointer hover:bg-white/30 transition nu-btn-active relative">
+                    <i class="fa-solid fa-user text-white text-lg"></i>
+                    <span class="absolute top-0 right-0 w-3.5 h-3.5 bg-nu-green rounded-full border-2 border-nu-purple"></span>
+                </div>
+
+                <!-- Icons Right Top -->
+                <div class="flex items-center space-x-6 text-xl">
+                    <button id="eye-toggle-btn" onclick="toggleEye()" class="focus:outline-none text-white hover:opacity-80 nu-btn-active" title="Ocultar/Mostrar saldo">
+                        <i id="eye-icon" class="fa-regular fa-eye"></i>
+                    </button>
+                    <button onclick="openProfileModal()" class="focus:outline-none text-white hover:opacity-80 nu-btn-active" title="Configurações">
+                        <i class="fa-solid fa-sliders"></i>
+                    </button>
+                    <button onclick="triggerToast('Nenhuma notificação nova no momento')" class="focus:outline-none text-white hover:opacity-80 nu-btn-active" title="Avisos">
+                        <i class="fa-regular fa-bell"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Greeting Text -->
+            <div class="text-white flex items-center justify-between">
+                <span class="text-xl font-semibold tracking-tight">Olá, <span id="user-display-name">Gabriel Silva</span></span>
+                <span onclick="openProfileModal()" class="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full cursor-pointer transition border border-white/10">Perfil & Saldos</span>
+            </div>
+        </header>
+
+        <!-- MAIN SCROLLABLE CONTENT -->
+        <main class="flex-1 overflow-y-auto no-scrollbar space-y-2">
+
+            <!-- SALDO CONTA CORRENTE -->
+            <section class="p-5 cursor-pointer hover:bg-nu-cardHover transition nu-btn-active flex flex-col justify-between" onclick="openTransactionsHistory()">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-base font-medium text-gray-200">Conta</span>
+                    <i class="fa-solid fa-chevron-right text-xs text-nu-textMuted"></i>
+                </div>
+                <div class="text-2xl font-bold tracking-tight my-1">
+                    <span class="currency-prefix">R$ </span><span class="sensitive-value" id="account-balance-text">1.250,00</span>
+                </div>
+                <div class="flex items-center space-x-1.5 text-xs text-nu-green font-medium mt-1">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Rendendo +R$ 0,85 este mês (100% CDI)</span>
+                </div>
+            </section>
+
+            <!-- BOTOES DE AÇÃO RÁPIDA -->
+            <section class="px-5 py-2 overflow-x-auto no-scrollbar flex space-x-4">
+                <button onclick="openPixModal()" class="flex flex-col items-center min-w-[72px] focus:outline-none nu-btn-active">
+                    <div class="w-16 h-16 rounded-full bg-nu-card flex items-center justify-center mb-2 shadow-sm border border-zinc-800">
+                        <i class="fa-brands fa-pix text-xl text-white"></i>
+                    </div>
+                    <span class="text-xs font-medium text-center text-gray-200">Área Pix</span>
+                </button>
+
+                <button onclick="openPayModal()" class="flex flex-col items-center min-w-[72px] focus:outline-none nu-btn-active">
+                    <div class="w-16 h-16 rounded-full bg-nu-card flex items-center justify-center mb-2 shadow-sm border border-zinc-800">
+                        <i class="fa-solid fa-barcode text-xl text-white"></i>
+                    </div>
+                    <span class="text-xs font-medium text-center text-gray-200">Pagar</span>
+                </button>
+
+                <button onclick="openTransferModal()" class="flex flex-col items-center min-w-[72px] focus:outline-none nu-btn-active">
+                    <div class="w-16 h-16 rounded-full bg-nu-card flex items-center justify-center mb-2 shadow-sm border border-zinc-800">
+                        <i class="fa-solid fa-arrow-up text-xl text-white"></i>
+                    </div>
+                    <span class="text-xs font-medium text-center text-gray-200">Transferir</span>
+                </button>
+
+                <button onclick="openDepositModal()" class="flex flex-col items-center min-w-[72px] focus:outline-none nu-btn-active">
+                    <div class="w-16 h-16 rounded-full bg-nu-card flex items-center justify-center mb-2 shadow-sm border border-zinc-800">
+                        <i class="fa-solid fa-arrow-down text-xl text-white"></i>
+                    </div>
+                    <span class="text-xs font-medium text-center text-gray-200">Depositar</span>
+                </button>
+
+                <button onclick="openCofrinhoModal()" class="flex flex-col items-center min-w-[72px] focus:outline-none nu-btn-active">
+                    <div class="w-16 h-16 rounded-full bg-nu-card flex items-center justify-center mb-2 shadow-sm border border-zinc-800">
+                        <!-- SVG PORQUINHO PRETO E BRANCO -->
+                        <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="black" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8.8 3.5 2 4.5V19a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-1h4v1a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-2.1c2-1.2 3-3.1 3-4.9 0-2.5-1-4.5-3-5z"></path>
+                            <circle cx="16" cy="11" r="1" fill="white"></circle>
+                            <path d="M18 13h.01"></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs font-medium text-center text-gray-200">Cofrinho</span>
+                </button>
+
+                <button onclick="openLoanModal()" class="flex flex-col items-center min-w-[72px] focus:outline-none nu-btn-active">
+                    <div class="w-16 h-16 rounded-full bg-nu-card flex items-center justify-center mb-2 shadow-sm border border-zinc-800">
+                        <i class="fa-solid fa-hand-holding-dollar text-xl text-white"></i>
+                    </div>
+                    <span class="text-xs font-medium text-center text-gray-200">Empréstimo</span>
+                </button>
+
+                <button onclick="openTransactionsHistory()" class="flex flex-col items-center min-w-[72px] focus:outline-none nu-btn-active">
+                    <div class="w-16 h-16 rounded-full bg-nu-card flex items-center justify-center mb-2 shadow-sm border border-zinc-800">
+                        <i class="fa-solid fa-receipt text-xl text-white"></i>
+                    </div>
+                    <span class="text-xs font-medium text-center text-gray-200">Extrato</span>
+                </button>
+            </section>
+
+            <!-- MEUS CARTÕES BANNER -->
+            <div class="px-5 py-3">
+                <button onclick="openVirtualCardModal()" class="w-full bg-nu-card hover:bg-nu-cardHover p-4 rounded-2xl flex items-center justify-between transition nu-btn-active border border-zinc-800/60">
+                    <div class="flex items-center space-x-3">
+                        <i class="fa-solid fa-credit-card text-lg text-white"></i>
+                        <span class="text-xs font-semibold text-gray-200">Meus cartões</span>
+                    </div>
+                    <span class="text-xs text-nu-textMuted bg-zinc-800 px-2.5 py-1 rounded-md">1 Ativo</span>
+                </button>
+            </div>
+
+            <hr class="border-zinc-800/80 my-2">
+
+            <!-- CARTÃO DE CRÉDITO -->
+            <section class="p-5 cursor-pointer hover:bg-nu-cardHover transition nu-btn-active">
+                <div class="flex justify-between items-center mb-2" onclick="openCreditCardDetails()">
+                    <span class="text-base font-medium text-gray-200">Cartão de crédito</span>
+                    <i class="fa-solid fa-chevron-right text-xs text-nu-textMuted"></i>
+                </div>
+                
+                <div class="text-xs text-nu-textMuted mb-1">Fatura atual</div>
+                
+                <div class="text-2xl font-bold tracking-tight text-sky-400 my-1">
+                    <span class="currency-prefix">R$ </span><span class="sensitive-value" id="credit-invoice-text">430,50</span>
+                </div>
+                
+                <div class="text-xs text-nu-textMuted mt-1">
+                    Limite disponível: <span class="font-semibold text-gray-300"><span class="currency-prefix">R$ </span><span class="sensitive-value" id="credit-limit-text">1.569,50</span></span>
+                </div>
+
+                <div class="mt-4 flex space-x-3">
+                    <button onclick="payCreditInvoice()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-2.5 px-4 rounded-full text-xs transition nu-btn-active border border-zinc-700/50">
+                        Pagar fatura
+                    </button>
+                    <button onclick="openVirtualCardModal()" class="bg-zinc-900 hover:bg-zinc-800 text-gray-300 font-semibold py-2.5 px-4 rounded-full text-xs transition nu-btn-active border border-zinc-800">
+                        Parcelar
+                    </button>
+                </div>
+            </section>
+
+            <hr class="border-zinc-800/80 my-2">
+
+            <!-- CAIXINHAS E INVESTIMENTOS (PORQUINHO PRETO E BRANCO OFICIAL) -->
+            <section class="p-5 cursor-pointer hover:bg-nu-cardHover transition nu-btn-active" onclick="openCofrinhoModal()">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-base font-medium text-gray-200">Cofrinho e Investimentos</span>
+                    <i class="fa-solid fa-chevron-right text-xs text-nu-textMuted"></i>
+                </div>
+                
+                <div class="flex items-center justify-between my-2">
+                    <div class="flex items-center space-x-3">
+                        <!-- CONTAINER PORQUINHO PRETO E BRANCO -->
+                        <div class="w-12 h-12 rounded-2xl bg-black border border-white/80 flex items-center justify-center p-2 shadow-inner">
+                            <svg class="w-full h-full text-white" viewBox="0 0 24 24" fill="black" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8.8 3.5 2 4.5V19a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-1h4v1a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-2.1c2-1.2 3-3.1 3-4.9 0-2.5-1-4.5-3-5z"></path>
+                                <circle cx="16" cy="11" r="1" fill="white"></circle>
+                                <path d="M18 13h.01"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-sm font-semibold text-white">Reserva de Emergência</div>
+                            <div class="text-xs text-nu-textMuted">Rendimento 100% do CDI</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-bold text-white"><span class="currency-prefix">R$ </span><span class="sensitive-value" id="savings-balance-text">500,00</span></div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- BOTTOM NAVIGATION BAR -->
+        <nav class="fixed bottom-0 left-0 right-0 max-w-2xl mx-auto bg-black/95 backdrop-blur-md border-t border-zinc-800/80 px-6 py-3 flex justify-around items-center z-40">
+            <button class="flex flex-col items-center text-nu-purpleLight focus:outline-none">
+                <i class="fa-solid fa-arrow-up-down-left-right text-lg mb-0.5"></i>
+                <span class="text-[10px] font-medium">Início</span>
+            </button>
+            <button onclick="triggerToast('Shopping Nubank indisponível na simulação')" class="flex flex-col items-center text-nu-textMuted hover:text-white transition">
+                <i class="fa-solid fa-bag-shopping text-lg mb-0.5"></i>
+                <span class="text-[10px] font-medium">Shopping</span>
+            </button>
+            <button onclick="openCofrinhoModal()" class="flex flex-col items-center text-nu-textMuted hover:text-white transition">
+                <i class="fa-solid fa-dollar-sign text-lg mb-0.5"></i>
+                <span class="text-[10px] font-medium">Investir</span>
+            </button>
+            <button onclick="openProfileModal()" class="flex flex-col items-center text-nu-textMuted hover:text-white transition">
+                <i class="fa-solid fa-shield-halved text-lg mb-0.5"></i>
+                <span class="text-[10px] font-medium">Segurança</span>
+            </button>
+        </nav>
+
+        <!-- MODAL DE OPERAÇÃO DE VALOR -->
+        <div id="app-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col justify-end hidden z-[70]">
+            <div class="bg-zinc-900 w-full max-w-2xl mx-auto rounded-t-3xl p-6 border-t border-zinc-800 flex flex-col space-y-4 shadow-2xl">
+                <div class="flex justify-between items-center pb-2 border-b border-zinc-800">
+                    <div class="flex items-center space-x-2">
+                        <div id="modal-icon-container" class="w-8 h-8 rounded-full bg-nu-purple/20 flex items-center justify-center text-nu-purpleLight">
+                            <i id="modal-icon" class="fa-solid fa-pix"></i>
+                        </div>
+                        <h3 id="modal-title" class="text-lg font-bold text-white">Operação</h3>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button id="pix-edit-btn" onclick="editPixReview()" class="hidden text-nu-textMuted hover:text-white text-xl" title="Editar dados do Pix">
+                            <i class="fa-solid fa-pencil"></i>
+                        </button>
+                        <button onclick="closeModal()" class="text-nu-textMuted hover:text-white text-xl">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <p id="modal-desc" class="text-xs text-nu-textMuted">Insira os dados para prosseguir.</p>
+
+                <div id="modal-body" class="space-y-3">
+                    <div>
+                        <label id="input-label-1" class="block text-xs font-medium text-gray-300 mb-1">Valor (R$)</label>
+                        <input type="number" id="modal-input-amount" placeholder="0,00" min="0.01" step="0.01" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-xl font-semibold focus:border-nu-purple">
+                    </div>
+                    <div id="extra-input-container" class="hidden">
+                        <label id="input-label-2" class="block text-xs font-medium text-gray-300 mb-1">Chave Pix / Destinatário</label>
+                        <input type="text" id="modal-input-extra" placeholder="CPF, E-mail ou Telefone" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3 text-white text-sm focus:border-nu-purple">
+                    </div>
+                </div>
+
+                <div class="flex space-x-3 pt-4">
+                    <button onclick="closeModal()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-3.5 rounded-full text-sm nu-btn-active">
+                        Cancelar
+                    </button>
+                    <button id="modal-confirm-btn" class="flex-1 bg-nu-purple hover:bg-nu-purpleDark text-white font-semibold py-3.5 rounded-full text-sm nu-btn-active">
+                        Continuar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEITOR DE BOLETO: CÂMERA / QR CODE / CÓDIGO DE BARRAS -->
+        <div id="barcode-scanner-modal" class="fixed inset-0 bg-black z-[110] hidden overflow-y-auto">
+            <div class="w-full max-w-2xl min-h-full mx-auto bg-black flex flex-col">
+                <div class="p-5 border-b border-zinc-800 flex justify-between items-center sticky top-0 bg-black z-10">
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="closeBoletoScanner()" class="text-white text-xl nu-btn-active">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                        <div>
+                            <h2 class="text-base font-bold text-white">Ler código</h2>
+                            <p class="text-[10px] text-nu-textMuted mt-0.5">Aponte a câmera para o QR Code ou código de barras</p>
+                        </div>
+                    </div>
+                    <div class="w-9 h-9 rounded-full bg-nu-purple/20 flex items-center justify-center text-nu-purpleLight">
+                        <i class="fa-solid fa-camera"></i>
+                    </div>
+                </div>
+
+                <div class="flex-1 p-5 flex flex-col">
+                    <div class="bg-zinc-900 rounded-3xl border border-zinc-800 p-3 shadow-2xl">
+                        <div id="barcode-reader" class="scanner-reader w-full min-h-[310px] rounded-2xl overflow-hidden bg-black"></div>
+                    </div>
+
+                    <div id="barcode-scan-status" class="mt-5 text-center text-sm text-nu-textMuted">
+                        Aponte para o código e aguarde a leitura.
+                    </div>
+                    <div id="barcode-detected-box" class="hidden mt-3 bg-zinc-900 border border-nu-purple/40 rounded-2xl p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-nu-purple/20 text-nu-purpleLight flex items-center justify-center">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-xs text-nu-textMuted">Código identificado</div>
+                                <div id="barcode-detected-value" class="text-sm font-semibold text-white break-all mt-1"></div>
+                            </div>
+                        </div>
+                        <button type="button" onclick="confirmDetectedBoletoCode()" class="w-full mt-4 bg-nu-purple hover:bg-nu-purpleDark text-white font-semibold py-3.5 rounded-full text-sm nu-btn-active">
+                            <i class="fa-solid fa-check mr-2"></i>Usar este código
+                        </button>
+                    </div>
+
+                    <button type="button" onclick="openNativeBoletoCamera()" class="mt-3 w-full bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-3.5 rounded-full text-sm nu-btn-active">
+                        <i class="fa-solid fa-camera mr-2"></i>Usar a câmera do celular
+                    </button>
+
+                    <button type="button" onclick="closeBoletoScanner()" class="mt-3 w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-gray-300 font-semibold py-3.5 rounded-full text-sm nu-btn-active">
+                        Digitar o código manualmente
+                    </button>
+                    <input id="boleto-camera-file" type="file" accept="image/*" capture="environment" class="hidden">
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN PIN MODAL (TECLADO COM ANIMAÇÃO ---- -> ••••) -->
+        <div id="pin-modal" class="fixed inset-0 bg-black flex flex-col justify-between hidden z-[80] p-6 overflow-hidden">
+            <!-- Header Pin Screen -->
+            <div class="flex justify-between items-center">
+                <button onclick="closePinModal()" class="text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <span class="text-xs text-nu-textMuted font-medium uppercase tracking-wider">Confirmação de Segurança</span>
+                <div class="w-5"></div>
+            </div>
+
+            <!-- PIN Animated Indicators -->
+            <div class="flex flex-col items-center justify-center space-y-6 my-auto">
+                <div class="w-12 h-12 rounded-full bg-nu-purple/20 flex items-center justify-center text-nu-purpleLight text-xl">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <div class="text-center">
+                    <h2 class="text-lg font-bold text-white">Digite sua senha de 4 dígitos</h2>
+                    <p class="text-xs text-nu-textMuted mt-1">Autorize a transação no seu aplicativo</p>
+                </div>
+
+                <!-- PIN ANIMAÇÃO DE DÍGITOS: ---- -> •--- -> ••-- -> •••- -> •••• -->
+                <div id="pin-display-container" class="flex space-x-4 text-3xl font-mono text-nu-purpleLight py-4 tracking-widest">
+                    <span id="pin-char-0" class="w-8 text-center text-zinc-600">-</span>
+                    <span id="pin-char-1" class="w-8 text-center text-zinc-600">-</span>
+                    <span id="pin-char-2" class="w-8 text-center text-zinc-600">-</span>
+                    <span id="pin-char-3" class="w-8 text-center text-zinc-600">-</span>
+                </div>
+            </div>
+
+            <!-- KEYPAD NUMÉRICO REALISTA -->
+            <div class="w-full max-w-xs mx-auto grid grid-cols-3 gap-4 pb-6">
+                <button onclick="pressPinKey('1')" class="h-16 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xl font-semibold flex items-center justify-center nu-btn-active">1</button>
+                <button onclick="pressPinKey('2')" class="h-16 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xl font-semibold flex items-center justify-center nu-btn-active">2</button>
+                <button onclick="pressPinKey('3')" class="h-16 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xl font-semibold flex items-center justify-center nu-btn-active">3</button>
+                <button onclick="pressPinKey('4')" class="h-16 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xl font-semibold flex items-center justify-center nu-btn-active">4</button>
+                <button onclick="pressPinKey('5')" class="h-16 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xl font-semibold flex items-center justify-center nu-btn-active">5</button>
+                <button onclick="pressPinKey('6')" class="h-16 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xl font-semibold flex items-center justify-center nu-btn-active">6</button>
+                <button onclick="pressPinKey('7')" class="h-16 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xl font-semibold flex items-center justify-center nu-btn-active">7</button>
+                <button onclick="pressPinKey('8')" class="h-16 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xl font-semibold flex items-center justify-center nu-btn-active">8</button>
+                <button onclick="pressPinKey('9')" class="h-16 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xl font-semibold flex items-center justify-center nu-btn-active">9</button>
+                <div class="h-16"></div>
+                <button onclick="pressPinKey('0')" class="h-16 rounded-full bg-zinc-900 hover:bg-zinc-800 text-white text-xl font-semibold flex items-center justify-center nu-btn-active">0</button>
+                <button onclick="backspacePinKey()" class="h-16 rounded-full bg-zinc-900/50 hover:bg-zinc-800 text-gray-400 text-lg flex items-center justify-center nu-btn-active">
+                    <i class="fa-solid fa-delete-left"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- PROFILE & CONFIGS MODAL -->
+        <div id="profile-modal" class="fixed inset-0 bg-black flex flex-col hidden z-50 overflow-y-auto">
+            <div class="p-5 border-b border-zinc-800 flex justify-between items-center bg-zinc-900 sticky top-0">
+                <div class="flex items-center space-x-3">
+                    <button onclick="closeProfileModal()" class="text-white text-lg">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    <h2 class="text-base font-bold text-white">Editar Perfil e Senha</h2>
+                </div>
+            </div>
+
+            <div class="p-5 space-y-5">
+                <div class="space-y-4 bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
+                    <h3 class="text-xs font-bold text-nu-purpleLight uppercase tracking-wider">Dados Pessoais</h3>
+                    <div>
+                        <label class="block text-xs text-nu-textMuted mb-1">Seu Nome Completo</label>
+                        <input type="text" id="edit-user-name" class="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-sm text-white focus:border-nu-purple">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-nu-textMuted mb-1">Senha de 4 dígitos do Pix/Cartão</label>
+                        <input type="password" id="edit-user-pin" maxlength="4" placeholder="1234" class="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-sm text-white focus:border-nu-purple font-mono">
+                    </div>
+                </div>
+
+                <div class="space-y-4 bg-zinc-900 p-4 rounded-2xl border border-zinc-800">
+                    <h3 class="text-xs font-bold text-nu-purpleLight uppercase tracking-wider">Ajuste de Saldos</h3>
+                    <div>
+                        <label class="block text-xs text-nu-textMuted mb-1">Saldo em Conta (R$)</label>
+                        <input type="number" id="edit-account-balance" step="0.01" class="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-sm text-white focus:border-nu-purple">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-nu-textMuted mb-1">Fatura Atual do Cartão (R$)</label>
+                        <input type="number" id="edit-credit-invoice" step="0.01" class="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-sm text-white focus:border-nu-purple">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-nu-textMuted mb-1">Cofrinho de Emergência (R$)</label>
+                        <input type="number" id="edit-savings-balance" step="0.01" class="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-sm text-white focus:border-nu-purple">
+                    </div>
+                </div>
+
+                <button onclick="saveProfileChanges()" class="w-full bg-nu-purple hover:bg-nu-purpleDark text-white font-bold py-3.5 rounded-full text-sm nu-btn-active">
+                    Salvar Alterações
+                </button>
+            </div>
+        </div>
+
+        <!-- HISTÓRICO DE EXTRATO MODAL -->
+        <div id="history-modal" class="fixed inset-0 bg-black flex flex-col hidden z-50 overflow-y-auto">
+            <div class="p-5 border-b border-zinc-800 flex justify-between items-center bg-zinc-900 sticky top-0">
+                <div class="flex items-center space-x-3">
+                    <button onclick="closeHistoryModal()" class="text-white text-lg">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <h2 class="text-base font-bold text-white">Histórico de Movimentações</h2>
+                </div>
+            </div>
+
+            <div class="p-5 space-y-4">
+                <div class="bg-zinc-900 p-4 rounded-2xl border border-zinc-800 flex justify-between items-center">
+                    <div>
+                        <div class="text-xs text-nu-textMuted">Saldo da conta</div>
+                        <div class="text-xl font-bold text-white">R$ <span id="history-current-balance">1.250,00</span></div>
+                    </div>
+                    <button onclick="closeHistoryModal(); openDepositModal();" class="bg-nu-purple text-xs font-semibold px-4 py-2 rounded-full">
+                        + Depositar
+                    </button>
+                </div>
+
+                <h3 class="text-xs font-bold text-nu-textMuted uppercase tracking-wider pt-2">Histórico Recente</h3>
+                <div id="history-list" class="space-y-3">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA DO COFRINHO -->
+        <div id="cofrinho-screen" class="fixed inset-0 bg-black hidden z-50 overflow-y-auto items-center justify-center">
+            <div class="w-full max-w-2xl min-h-screen bg-black mx-auto flex flex-col">
+                <div class="p-5 border-b border-zinc-800 flex items-center bg-zinc-900 sticky top-0 z-10">
+                    <button onclick="closeCofrinhoScreen()" class="text-white text-lg mr-4 w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <div class="flex-1">
+                        <h2 class="text-base font-bold text-white">Cofrinho</h2>
+                        <p class="text-[10px] text-nu-textMuted">Seu dinheiro guardado</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-nu-purple/20 flex items-center justify-center text-nu-purpleLight">
+                        <i class="fa-solid fa-piggy-bank"></i>
+                    </div>
+                </div>
+
+                <div class="p-5 flex-1">
+                    <div class="bg-zinc-900 rounded-3xl border border-zinc-800 p-7 text-center shadow-2xl">
+                        <div class="w-16 h-16 mx-auto rounded-2xl bg-black border border-white/80 flex items-center justify-center mb-4">
+                            <i class="fa-solid fa-piggy-bank text-2xl text-white"></i>
+                        </div>
+                        <div class="text-xs text-nu-textMuted mb-2">Valor guardado</div>
+                        <div class="text-4xl font-bold text-white tracking-tight">
+                            <span class="currency-prefix">R$ </span><span id="cofrinho-balance">0,00</span>
+                        </div>
+                        <p class="text-xs text-nu-textMuted mt-2">Seu dinheiro fica separado do saldo da conta</p>
+
+                        <button onclick="openCofrinhoWithdraw()" class="w-full mt-7 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-semibold py-3.5 rounded-full">
+                            <i class="fa-solid fa-arrow-down mr-2"></i>Retirar
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mt-4">
+                        <div class="bg-zinc-900 rounded-2xl border border-zinc-800 p-4">
+                            <div class="w-9 h-9 rounded-xl bg-nu-purple/20 flex items-center justify-center text-nu-purpleLight mb-3">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <div class="text-[11px] text-nu-textMuted">Dinheiro protegido</div>
+                            <div class="text-sm font-bold text-white mt-1">Separado da conta</div>
+                        </div>
+                        <div class="bg-zinc-900 rounded-2xl border border-zinc-800 p-4">
+                            <div class="w-9 h-9 rounded-xl bg-nu-purple/20 flex items-center justify-center text-nu-purpleLight mb-3">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </div>
+                            <div class="text-[11px] text-nu-textMuted">Rendimento</div>
+                            <div class="text-sm font-bold text-white mt-1">Demonstrativo</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-zinc-900 rounded-3xl border border-zinc-800 p-5 mt-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <div class="text-sm font-bold text-white">Guardar dinheiro</div>
+                                <div class="text-[11px] text-nu-textMuted mt-1">Adicione parte do seu saldo ao cofrinho</div>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-nu-purple/20 flex items-center justify-center text-nu-purpleLight">
+                                <i class="fa-solid fa-plus"></i>
+                            </div>
+                        </div>
+                        <button onclick="openCofrinhoSave()" class="w-full bg-nu-purple hover:bg-nu-purpleDark text-white font-semibold py-3.5 rounded-full">
+                            Guardar
+                        </button>
+                    </div>
+
+                    <div class="bg-zinc-900 rounded-3xl border border-zinc-800 p-5 mt-4 mb-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-white">
+                                <i class="fa-solid fa-lock"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-sm font-semibold text-white">Senha de segurança</div>
+                                <div class="text-[11px] text-nu-textMuted mt-1">Para entrar, guardar e retirar dinheiro, você confirma sua senha de 4 dígitos.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMPROVANTE DEMONSTRATIVO DE TRANSFERÊNCIA -->
+        <div id="transaction-detail-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-end justify-center hidden z-[60] p-0">
+            <div class="w-full max-w-2xl bg-zinc-950 rounded-t-3xl border-t border-zinc-800 p-6 space-y-5 max-h-[88vh] overflow-y-auto">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div id="transaction-detail-type" class="text-xs text-nu-textMuted uppercase tracking-wider">Movimentação</div>
+                        <div id="transaction-detail-amount" class="text-2xl font-bold text-white mt-1">R$ 0,00</div>
+                    </div>
+                    <button onclick="closeTransactionDetails()" class="w-10 h-10 rounded-full bg-zinc-900 text-white flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="bg-zinc-900 rounded-2xl border border-zinc-800 divide-y divide-zinc-800">
+                    <div class="p-4 flex justify-between gap-4"><span class="text-xs text-nu-textMuted">Nome</span><span id="transaction-detail-name" class="text-xs text-white font-medium text-right">—</span></div>
+                    <div class="p-4 flex justify-between gap-4"><span class="text-xs text-nu-textMuted">Instituição / Banco</span><span id="transaction-detail-institution" class="text-xs text-white font-medium text-right">—</span></div>
+                    <div class="p-4 flex justify-between gap-4"><span class="text-xs text-nu-textMuted">Chave Pix</span><span id="transaction-detail-key" class="text-xs text-white font-medium text-right break-all max-w-[60%]">—</span></div>
+                    <div class="p-4 flex justify-between gap-4"><span class="text-xs text-nu-textMuted">Dia</span><span id="transaction-detail-day" class="text-xs text-white font-medium text-right">—</span></div>
+                    <div class="p-4 flex justify-between gap-4"><span class="text-xs text-nu-textMuted">Horário</span><span id="transaction-detail-time" class="text-xs text-white font-medium text-right">—</span></div>
+                </div>
+                <button onclick="closeTransactionDetails()" class="w-full bg-nu-purple text-white font-semibold py-3.5 rounded-full text-sm">Fechar</button>
+            </div>
+        </div>
+
+        <!-- TELA DE SUCESSO DO PIX (mostrada antes do comprovante) -->
+        <!-- TELA DE SUCESSO DO PIX: primeiro aparece esta tela; o comprovante abre ao tocar em "Abrir comprovante". -->
+        <div id="pix-success-modal" class="fixed inset-0 bg-black hidden z-[75] overflow-y-auto">
+            <div class="w-full max-w-2xl min-h-[100dvh] mx-auto bg-black text-white flex flex-col">
+                <div class="w-full flex justify-start pt-5 pb-2 px-5">
+                    <img
+                        src="data:image/jpeg;base64,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"
+                        alt=""
+                        class="block w-[min(54vw,230px)] h-auto object-contain select-none pointer-events-none ml-0"
+                        draggable="false"
+                    >
+                </div>
+
+                <div class="px-5 sm:px-7 pb-10 pt-4 flex-1 flex flex-col">
+                    <h1 class="text-[24px] sm:text-[28px] font-semibold tracking-tight text-white leading-tight mb-7">Transferência concluída</h1>
+
+                    <div class="w-full">
+                        <div class="flex items-start justify-between gap-4 py-5 border-b border-zinc-900">
+                            <span class="text-[17px] sm:text-[19px] font-semibold text-white shrink-0">Para</span>
+                            <span id="pix-success-name" class="min-w-0 flex-1 text-[16px] sm:text-[18px] font-semibold text-white text-right break-words [overflow-wrap:anywhere] leading-tight">—</span>
+                        </div>
+                        <div class="flex items-start justify-between gap-4 py-5 border-b border-zinc-900">
+                            <span class="text-[17px] sm:text-[19px] font-semibold text-white shrink-0">Valor enviado</span>
+                            <span class="min-w-0 flex-1 text-[16px] sm:text-[18px] font-semibold text-white text-right break-words [overflow-wrap:anywhere] leading-tight">R$ <span id="pix-success-amount">0,00</span></span>
+                        </div>
+                        <div class="flex items-start justify-between gap-4 py-5 border-b border-zinc-900">
+                            <span class="text-[17px] sm:text-[19px] font-semibold text-white shrink-0">Quando</span>
+                            <span id="pix-success-when" class="min-w-0 flex-1 text-[16px] sm:text-[18px] font-semibold text-white text-right break-words [overflow-wrap:anywhere] leading-tight">—</span>
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="openPixReceiptFromSuccess()" class="mt-9 mx-auto flex items-center justify-center gap-2 text-nu-purpleLight font-semibold text-[18px] sm:text-[19px] py-3 px-5 nu-btn-active">
+                        <i class="fa-regular fa-file-lines text-[21px]"></i>
+                        <span>Abrir comprovante</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="receipt-modal" class="fixed inset-0 bg-black flex flex-col hidden z-50 overflow-y-auto">
+            <div class="p-5 border-b border-zinc-800 flex justify-between items-center bg-zinc-900 sticky top-0">
+                <div class="flex items-center space-x-3">
+                    <button onclick="closeReceiptModal()" class="text-white text-lg">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    <div><h2 class="text-base font-bold text-white">Comprovante</h2></div>
+                </div>
+                <button id="receipt-share-button" onclick="shareReceipt()" class="text-nu-purpleLight font-semibold text-xs">
+                    <i class="fa-solid fa-share-nodes text-sm mr-1"></i> Enviar
+                </button>
+            </div>
+
+            <div id="receipt-share-content" class="p-6 space-y-6 bg-black">
+                <!-- Logo Nubank -->
+                <div class="flex justify-between items-center">
+                    <div class="text-nu-purple text-2xl font-black tracking-tighter">nu</div>
+                    <div class="text-xs text-nu-textMuted" id="receipt-date"></div>
+                </div>
+
+                <div class="border-b border-zinc-800 pb-4">
+                    <div class="text-xs text-nu-textMuted uppercase mb-1">Valor transferido</div>
+                    <div class="text-3xl font-extrabold text-white">R$ <span id="receipt-amount">0,00</span></div>
+                </div>
+
+                <!-- Detalhes Destino -->
+                <div class="space-y-3 text-xs border-b border-zinc-800 pb-4">
+                    <div class="font-bold text-gray-300 uppercase">Destino</div>
+                    <div class="flex justify-between"><span class="text-nu-textMuted">Nome</span><span id="receipt-dest-name" class="font-medium text-white">Maria Oliveira</span></div>
+                    <div class="flex justify-between"><span class="text-nu-textMuted">Chave / CPF</span><span id="receipt-dest-key" class="font-medium text-white">***.482.901-**</span></div>
+                    <div class="flex justify-between"><span class="text-nu-textMuted">Instituição</span><span id="receipt-dest-institution" class="font-medium text-white">NU PAGAMENTOS S.A</span></div>
+                </div>
+
+                <!-- Detalhes Origem -->
+                <div class="space-y-3 text-xs border-b border-zinc-800 pb-4">
+                    <div class="font-bold text-gray-300 uppercase">Origem</div>
+                    <div class="flex justify-between"><span class="text-nu-textMuted">Nome</span><span id="receipt-orig-name" class="font-medium text-white">Gabriel Silva</span></div>
+                    <div class="flex justify-between"><span class="text-nu-textMuted">Instituição</span><span id="receipt-orig-institution" class="font-medium text-white">NU PAGAMENTOS S.A</span></div>
+                </div>
+
+                <!-- ID Transação -->
+                <div class="space-y-1 text-[10px] text-nu-textMuted">
+                    <div>Código de autenticação:</div>
+                    <div id="receipt-auth-id" class="font-mono text-gray-400 break-all">E00038166202610041245A8F91B2C3D4</div>
+                </div>
+                <button onclick="closeReceiptModal()" data-share-exclude="true" class="w-full bg-nu-purple hover:bg-nu-purpleDark text-white font-semibold py-3.5 rounded-full text-xs transition">
+                    Voltar para início
+                </button>
+            </div>
+        </div>
+
+        <!-- BOTTOM SHEET DE ERRO / AVISOS NATIVOS NUBANK -->
+        <div id="alert-sheet" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col justify-end hidden z-50">
+            <div class="bg-zinc-900 w-full max-w-2xl mx-auto rounded-t-3xl p-6 border-t border-zinc-800 text-center space-y-4">
+                <div id="alert-sheet-icon" class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center mx-auto text-xl">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h3 id="alert-sheet-title" class="text-base font-bold text-white">Aviso</h3>
+                <p id="alert-sheet-desc" class="text-xs text-nu-textMuted leading-relaxed">Mensagem de aviso...</p>
+                <button onclick="closeAlertSheet()" class="w-full bg-nu-purple text-white font-semibold py-3.5 rounded-full text-xs nu-btn-active">
+                    Entendido
+                </button>
+            </div>
+        </div>
+
+        <!-- VIRTUAL CARD MODAL -->
+        <div id="card-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md flex flex-col justify-center items-center hidden z-50 p-6">
+            <div class="w-full max-w-sm bg-gradient-to-br from-nu-purple via-nu-purpleDark to-black p-6 rounded-3xl border border-white/10 shadow-2xl text-white relative">
+                <div class="flex justify-between items-start mb-8">
+                    <i class="fa-brands fa-pix text-2xl opacity-80"></i>
+                    <button onclick="closeVirtualCardModal()" class="text-white/80 hover:text-white text-xl">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="text-xs text-white/60 mb-1">Cartão Virtual Nubank</div>
+                <div class="text-lg font-mono tracking-widest my-4">4024 •••• •••• 8892</div>
+                <div class="flex justify-between items-end mt-6">
+                    <div>
+                        <div class="text-[10px] text-white/60 uppercase">Validade</div>
+                        <div class="text-xs font-bold">12/29</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-white/60 uppercase">CVV</div>
+                        <div class="text-xs font-bold">842</div>
+                    </div>
+                    <i class="fa-brands fa-cc-mastercard text-3xl"></i>
+                </div>
+            </div>
+            <button onclick="closeVirtualCardModal()" class="mt-6 bg-zinc-800 text-white font-semibold px-6 py-3 rounded-full text-xs">
+                Fechar
+            </button>
+        </div>
+
+        <!-- TOAST NOTIFICATION -->
+        <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 bg-zinc-900/95 border border-zinc-700 text-white px-5 py-3.5 rounded-2xl text-xs shadow-2xl hidden z-[120] flex items-center space-x-2.5 max-w-[calc(100%-32px)]">
+            <i id="toast-icon" class="fa-solid fa-circle-check text-nu-green text-sm"></i>
+            <span id="toast-text" class="font-medium">Sucesso</span>
+        </div>
+
+    </div>
+
+    <!-- LOGIC AND APPLICATION STATE -->
+    <script>
+        let state = {
+            accountBalance: 1250.00,
+            creditInvoice: 430.50,
+            creditLimit: 1569.50,
+            savingsBalance: 500.00,
+            isVisible: true,
+            userName: "Gabriel Silva",
+            userPin: "1234",
+            typedPin: "",
+            pendingAction: null,
+            transactions: [
+                { id: 1, title: "Transferência recebida", desc: "Maria Oliveira", amount: 150.00, type: "in", date: "Hoje", name: "Maria Oliveira", institution: "Banco do Brasil", pixKey: "maria@email.com", day: new Date().toLocaleDateString("pt-BR"), time: "10:30" },
+                { id: 2, title: "Pix enviado", desc: "Pagamento simulado", amount: 200.00, type: "out", date: "Ontem", name: "Pagamento simulado", institution: "Instituição simulada", pixKey: "11999999999", day: new Date(Date.now()-86400000).toLocaleDateString("pt-BR"), time: "15:42" }
+            ]
+        };
+
+        const elAccountBalance = document.getElementById('account-balance-text');
+        const elCreditInvoice = document.getElementById('credit-invoice-text');
+        const elCreditLimit = document.getElementById('credit-limit-text');
+        const elSavingsBalance = document.getElementById('savings-balance-text');
+        const elHistoryBalance = document.getElementById('history-current-balance');
+        const elUserName = document.getElementById('user-display-name');
+        const elEyeIcon = document.getElementById('eye-icon');
+
+        const appModal = document.getElementById('app-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDesc = document.getElementById('modal-desc');
+        const modalIcon = document.getElementById('modal-icon');
+        let modalAmountInput = document.getElementById('modal-input-amount');
+        let modalExtraInput = document.getElementById('modal-input-extra');
+        let extraInputContainer = document.getElementById('extra-input-container');
+        const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+        }
+
+        function formatBRL(val) {
+            return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function renderState() {
+            elUserName.innerText = state.userName;
+            if (state.isVisible) {
+                elAccountBalance.innerText = formatBRL(state.accountBalance);
+                elCreditInvoice.innerText = formatBRL(state.creditInvoice);
+                elCreditLimit.innerText = formatBRL(state.creditLimit);
+                elSavingsBalance.innerText = formatBRL(state.savingsBalance);
+                if (elHistoryBalance) elHistoryBalance.innerText = formatBRL(state.accountBalance);
+
+                document.querySelectorAll('.sensitive-value').forEach(el => el.classList.remove('blur-sm'));
+                document.querySelectorAll('.currency-prefix').forEach(el => el.style.display = 'inline');
+            } else {
+                document.querySelectorAll('.sensitive-value').forEach(el => {
+                    el.innerText = "••••";
+                    el.classList.add('blur-sm');
+                });
+            }
+        }
+
+        function toggleEye() {
+            state.isVisible = !state.isVisible;
+            elEyeIcon.className = state.isVisible ? "fa-regular fa-eye" : "fa-regular fa-eye-slash";
+            renderState();
+        }
+
+        let toastTimer;
+
+        function triggerToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            document.getElementById('toast-text').innerText = msg;
+
+            icon.className = type === 'error'
+                ? 'fa-solid fa-circle-exclamation text-red-400 text-sm'
+                : 'fa-solid fa-circle-check text-nu-green text-sm';
+
+            toast.classList.remove('hidden');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        function showPinErrorToast() {
+            // A senha incorreta apenas limpa os dígitos. A tela da senha continua aberta.
+            triggerToast('Senha incorreta. Tente novamente.', 'error');
+        }
+
+        function showAlertSheet(title, desc) {
+            // Todos os avisos agora usam a mesma notificação no topo,
+            // sem abrir o antigo aviso em formato de janela.
+            const message = desc ? `${title}: ${desc}` : title;
+            triggerToast(message, 'error');
+        }
+
+        function closeAlertSheet() {
+            document.getElementById('alert-sheet').classList.add('hidden');
+        }
+
+        function openModal(title, desc, iconClass, confirmCallback, showExtraInput = false, extraPlaceholder = "") {
+            // Recria os campos padrão toda vez que uma operação simples abre.
+            // Isso evita usar uma referência antiga depois que o fluxo do Pix
+            // substitui o conteúdo do modal.
+            document.getElementById('modal-body').innerHTML = `
+                <div>
+                    <label id="input-label-1" class="block text-xs font-medium text-gray-300 mb-1">Valor (R$)</label>
+                    <input type="number" id="modal-input-amount" placeholder="0,00" min="0.01" step="0.01" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-xl font-semibold focus:border-nu-purple">
+                </div>
+                <div id="extra-input-container" class="hidden">
+                    <label id="input-label-2" class="block text-xs font-medium text-gray-300 mb-1">Chave Pix / Destinatário</label>
+                    <input type="text" id="modal-input-extra" placeholder="CPF, E-mail ou Telefone" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3 text-white text-sm focus:border-nu-purple">
+                </div>`;
+
+            modalAmountInput = document.getElementById('modal-input-amount');
+            modalExtraInput = document.getElementById('modal-input-extra');
+            extraInputContainer = document.getElementById('extra-input-container');
+
+            modalTitle.innerText = title;
+            modalDesc.innerText = desc;
+            modalIcon.className = iconClass;
+            modalAmountInput.value = '';
+            modalExtraInput.value = '';
+
+            if (showExtraInput) {
+                extraInputContainer.classList.remove('hidden');
+                modalExtraInput.placeholder = extraPlaceholder;
+            } else {
+                extraInputContainer.classList.add('hidden');
+            }
+
+            modalConfirmBtn.innerText = 'Continuar';
+            modalConfirmBtn.onclick = confirmCallback;
+            appModal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            appModal.classList.add('hidden');
+        }
+
+        /* LOGICA DE SENHA TECLADO (---- -> •--- -> ••-- -> •••- -> ••••) */
+        function openPinModal(actionCallback) {
+            state.typedPin = "";
+            state.pendingAction = actionCallback;
+            updatePinDisplay();
+            document.getElementById('pin-modal').classList.remove('hidden');
+        }
+
+        function closePinModal() {
+            state.typedPin = "";
+            document.getElementById('pin-modal').classList.add('hidden');
+        }
+
+        function updatePinDisplay() {
+            for (let i = 0; i < 4; i++) {
+                const charEl = document.getElementById(`pin-char-${i}`);
+                if (i < state.typedPin.length) {
+                    charEl.innerText = "•";
+                    charEl.className = "w-8 text-center text-nu-purpleLight font-bold";
+                } else {
+                    charEl.innerText = "-";
+                    charEl.className = "w-8 text-center text-zinc-600 font-bold";
+                }
+            }
+        }
+
+        function pressPinKey(digit) {
+            if (state.typedPin.length < 4) {
+                state.typedPin += digit;
+                updatePinDisplay();
+
+                if (state.typedPin.length === 4) {
+                    setTimeout(() => {
+                        if (state.typedPin === state.userPin) {
+                            closePinModal();
+                            if (state.pendingAction) state.pendingAction();
+                        } else {
+                            // Não fecha a tela de senha quando houver erro.
+                            state.typedPin = "";
+                            updatePinDisplay();
+                            showPinErrorToast();
+                        }
+                    }, 250);
+                }
+            }
+        }
+
+        function backspacePinKey() {
+            if (state.typedPin.length > 0) {
+                state.typedPin = state.typedPin.slice(0, -1);
+                updatePinDisplay();
+            }
+        }
+
+        /* AÇÕES COM CONFIRMAÇÃO DE SENHA DE 4 DÍGITOS */
+        let pendingPixEdit = null;
+
+        function setPixEditButtonVisible(visible) {
+            const btn = document.getElementById('pix-edit-btn');
+            if (btn) btn.classList.toggle('hidden', !visible);
+        }
+
+        function editPixReview() {
+            if (!pendingPixEdit) return;
+
+            const { name, institution, key, amount } = pendingPixEdit;
+            modalTitle.innerText = "Enviar Pix";
+            modalDesc.innerText = "Edite somente o dado que estiver errado.";
+            modalIcon.className = "fa-brands fa-pix";
+            document.getElementById('modal-body').innerHTML = `
+                <div><label class="block text-xs font-medium text-gray-300 mb-1">Nome</label><input id="pix-name" type="text" value="${escapeHtml(name)}" placeholder="Nome completo ou empresa" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:border-nu-purple"></div>
+                <div><label class="block text-xs font-medium text-gray-300 mb-1">Instituição / Banco</label><input id="pix-institution" type="text" value="${escapeHtml(institution)}" placeholder="Nome do banco ou instituição" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:border-nu-purple"></div>
+                <div><label class="block text-xs font-medium text-gray-300 mb-1">Chave Pix</label><input id="pix-key" type="text" value="${escapeHtml(key)}" placeholder="CPF, telefone, e-mail ou CNPJ" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:border-nu-purple"></div>
+                <div><label class="block text-xs font-medium text-gray-300 mb-1">Valor</label><input id="pix-amount" type="number" value="${amount}" placeholder="0,00" min="0.01" step="0.01" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-xl font-semibold focus:border-nu-purple"></div>`;
+
+            setPixEditButtonVisible(false);
+            modalConfirmBtn.innerText = "Revisar Pix";
+            modalConfirmBtn.onclick = () => {
+                const name = document.getElementById('pix-name').value.trim();
+                const institution = document.getElementById('pix-institution').value.trim();
+                const key = document.getElementById('pix-key').value.trim();
+                const amountRaw = document.getElementById('pix-amount').value.trim();
+                const amount = parseFloat(amountRaw);
+
+                if (!name || !institution || !key || !amountRaw) {
+                    triggerToast('É obrigatório preencher todos os campos do Pix.', 'error');
+                    return;
+                }
+                if (isNaN(amount) || amount <= 0) {
+                    triggerToast('Digite um valor maior que zero.', 'error');
+                    return;
+                }
+                if (amount > state.accountBalance) {
+                    showAlertSheet('Saldo insuficiente', 'Você não possui saldo em conta suficiente para concluir este Pix.');
+                    return;
+                }
+                showPixReview(name, institution, key, amount);
+            };
+        }
+
+        function showPixReview(name, institution, key, amount) {
+            pendingPixEdit = { name, institution, key, amount };
+            modalTitle.innerText = "Revisar Pix";
+            modalDesc.innerText = "Confira os dados antes de confirmar o Pix.";
+            modalIcon.className = "fa-brands fa-pix";
+            document.getElementById('modal-body').innerHTML = `
+                <div class="bg-zinc-800/80 rounded-2xl p-4 space-y-4 border border-zinc-700">
+                    <div class="flex justify-between items-start gap-4">
+                        <div><div class="text-[10px] text-nu-textMuted uppercase">Destinatário</div><div class="text-sm font-semibold text-white mt-1">${escapeHtml(name)}</div></div>
+                        <i class="fa-solid fa-user text-nu-purpleLight"></i>
+                    </div>
+                    <div class="flex justify-between items-start gap-4">
+                        <div><div class="text-[10px] text-nu-textMuted uppercase">Instituição / Banco</div><div class="text-sm font-semibold text-white mt-1">${escapeHtml(institution)}</div></div>
+                        <i class="fa-solid fa-building-columns text-nu-purpleLight"></i>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-nu-textMuted uppercase">Chave Pix</div>
+                        <div class="text-sm font-semibold text-white mt-1 break-all">${escapeHtml(key)}</div>
+                    </div>
+                    <div class="pt-3 border-t border-zinc-700 flex justify-between items-center gap-3">
+                        <span class="text-xs text-nu-textMuted shrink-0">Valor</span>
+                        <span class="text-xl font-bold text-white text-right break-words [overflow-wrap:anywhere]">R$ ${formatBRL(amount)}</span>
+                    </div>
+                </div>`;
+
+            setPixEditButtonVisible(true);
+            modalConfirmBtn.innerText = "Confirmar Pix";
+            modalConfirmBtn.onclick = () => {
+                closeModal();
+                setPixEditButtonVisible(false);
+                openPinModal(() => {
+                    state.accountBalance -= amount;
+                    const now = new Date();
+                    state.transactions.unshift({
+                        id: Date.now(),
+                        title: 'Pix enviado',
+                        desc: key,
+                        amount,
+                        type: 'out',
+                        date: 'Hoje',
+                        name,
+                        institution,
+                        pixKey: key,
+                        timestamp: now.getTime(),
+                        day: now.toLocaleDateString('pt-BR'),
+                        time: now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
+                    });
+                    renderState();
+                    openPixSuccess(amount, key, name, institution);
+                });
+            };
+        }
+
+        function openPixModal() {
+            pendingPixEdit = null;
+            setPixEditButtonVisible(false);
+            modalTitle.innerText = "Enviar Pix";
+            modalDesc.innerText = "Preencha os dados da pessoa ou empresa e o valor.";
+            modalIcon.className = "fa-brands fa-pix";
+            document.getElementById('modal-body').innerHTML = `
+                <div><label class="block text-xs font-medium text-gray-300 mb-1">Nome</label><input id="pix-name" type="text" placeholder="Nome completo ou empresa" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:border-nu-purple"></div>
+                <div><label class="block text-xs font-medium text-gray-300 mb-1">Instituição / Banco</label><input id="pix-institution" type="text" placeholder="Nome do banco ou instituição" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:border-nu-purple"></div>
+                <div><label class="block text-xs font-medium text-gray-300 mb-1">Chave Pix</label><input id="pix-key" type="text" placeholder="CPF, telefone, e-mail ou CNPJ" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:border-nu-purple"></div>
+                <div><label class="block text-xs font-medium text-gray-300 mb-1">Valor</label><input id="pix-amount" type="number" placeholder="0,00" min="0.01" step="0.01" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-xl font-semibold focus:border-nu-purple"></div>`;
+            modalConfirmBtn.innerText = "Revisar Pix";
+            modalConfirmBtn.onclick = () => {
+                const name = document.getElementById('pix-name').value.trim();
+                const institution = document.getElementById('pix-institution').value.trim();
+                const key = document.getElementById('pix-key').value.trim();
+                const amountRaw = document.getElementById('pix-amount').value.trim();
+                const amount = parseFloat(amountRaw);
+
+                // Todos os campos do Pix precisam estar preenchidos antes da revisão.
+                if (!name || !institution || !key || !amountRaw) {
+                    triggerToast('É obrigatório preencher todos os campos do Pix.', 'error');
+                    return;
+                }
+
+                if (isNaN(amount) || amount <= 0) {
+                    triggerToast('Digite um valor maior que zero.', 'error');
+                    return;
+                }
+                if (amount > state.accountBalance) {
+                    showAlertSheet('Saldo insuficiente', 'Você não possui saldo em conta suficiente para concluir este Pix.');
+                    return;
+                }
+
+                // Primeiro passo: apenas mostrar a revisão. Nenhuma senha é solicitada aqui.
+                showPixReview(name, institution, key, amount);
+            };
+            appModal.classList.remove('hidden');
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;', '"':'&quot;'}[char]));
+        }
+
+        /* =============================
+           PAGAR BOLETO
+           Fluxo próprio com leitura por câmera + código manual.
+           ============================= */
+        let boletoScanner = null;
+        let boletoScannerRunning = false;
+        let boletoScannerStarting = false;
+        let boletoDetectedCode = '';
+        let boletoDetectedFormat = '';
+        let boletoScanLocked = false;
+        let boletoScanSession = 0;
+
+        // Mantém o leitor leve e evita que o navegador tente processar dezenas de
+        // formatos desnecessários ao mesmo tempo. QR + formatos comuns de boleto.
+        function createBoletoScanner() {
+            const supported = [];
+            const F = window.Html5QrcodeSupportedFormats || {};
+            ['QR_CODE','ITF','CODE_128','CODE_39','EAN_13','EAN_8','UPC_A','UPC_E'].forEach(name => {
+                if (F[name] !== undefined) supported.push(F[name]);
+            });
+            const options = { verbose: false };
+            if (supported.length) options.formatsToSupport = supported;
+            return new Html5Qrcode('barcode-reader', options);
+        }
+
+        function forceStopBoletoVideo() {
+            const reader = document.getElementById('barcode-reader');
+            if (!reader) return;
+            reader.querySelectorAll('video').forEach(video => {
+                try {
+                    const stream = video.srcObject;
+                    if (stream && stream.getTracks) stream.getTracks().forEach(track => track.stop());
+                } catch (_) {}
+                try { video.pause(); } catch (_) {}
+                try { video.srcObject = null; } catch (_) {}
+            });
+        }
+
+        function openPayModal() {
+            modalTitle.innerText = "Pagar Boleto";
+            modalDesc.innerText = "Leia o código com a câmera ou digite o código manualmente.";
+            modalIcon.className = "fa-solid fa-barcode";
+            document.getElementById('modal-body').innerHTML = `
+                <div class="space-y-3">
+                    <button type="button" onclick="openBoletoScanner()" class="w-full bg-nu-purple hover:bg-nu-purpleDark text-white font-semibold py-4 rounded-2xl text-sm flex items-center justify-center space-x-2 nu-btn-active">
+                        <i class="fa-solid fa-camera text-base"></i>
+                        <span>Ler com a câmera</span>
+                    </button>
+
+                    <div class="flex items-center space-x-3 py-1">
+                        <div class="h-px bg-zinc-800 flex-1"></div>
+                        <span class="text-[10px] uppercase tracking-wider text-nu-textMuted">ou digite</span>
+                        <div class="h-px bg-zinc-800 flex-1"></div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-300 mb-1">Código de barras ou QR Code</label>
+                        <input type="text" id="boleto-code" inputmode="numeric" autocomplete="off" placeholder="Digite ou cole o código" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:border-nu-purple">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-300 mb-1">Valor da cobrança (R$)</label>
+                        <input type="number" id="boleto-amount" placeholder="0,00" min="0.01" step="0.01" inputmode="decimal" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-xl font-semibold focus:border-nu-purple">
+                    </div>
+                </div>`;
+
+            modalConfirmBtn.innerText = "Revisar pagamento";
+            modalConfirmBtn.onclick = reviewBoletoPayment;
+            appModal.classList.remove('hidden');
+
+            const boletoCode = document.getElementById('boleto-code');
+            if (boletoCode) boletoCode.focus();
+        }
+
+        async function openBoletoScanner() {
+            const scannerModal = document.getElementById('barcode-scanner-modal');
+            const reader = document.getElementById('barcode-reader');
+
+            if (!scannerModal || !reader) {
+                triggerToast('Não foi possível abrir o leitor.', 'error');
+                return;
+            }
+
+            if (typeof Html5Qrcode === 'undefined') {
+                triggerToast('Leitor indisponível. Digite o código manualmente.', 'error');
+                return;
+            }
+
+            // Nunca inicia uma segunda câmera enquanto a anterior ainda estiver ativa.
+            if (boletoScannerStarting || boletoScannerRunning) {
+                return;
+            }
+
+            boletoScanSession += 1;
+            const session = boletoScanSession;
+            boletoScanLocked = false;
+            boletoDetectedCode = '';
+            boletoDetectedFormat = '';
+
+            await stopBoletoScanner();
+            forceStopBoletoVideo();
+            reader.innerHTML = '';
+            scannerModal.classList.remove('hidden');
+
+            const detectedBox = document.getElementById('barcode-detected-box');
+            const detectedValue = document.getElementById('barcode-detected-value');
+            const scanStatus = document.getElementById('barcode-scan-status');
+            if (detectedBox) detectedBox.classList.add('hidden');
+            if (detectedValue) detectedValue.textContent = '';
+            if (scanStatus) scanStatus.textContent = 'Aponte para o QR Code ou código de barras e aguarde.';
+
+            try {
+                const scanner = createBoletoScanner();
+                boletoScanner = scanner;
+                boletoScannerStarting = true;
+
+                const scanConfig = {
+                    fps: 4,
+                    qrbox: { width: 280, height: 160 },
+                    disableFlip: true
+                };
+
+                const onScanSuccess = (decodedText, decodedResult) => {
+                    if (session !== boletoScanSession || boletoScanLocked) return;
+                    const code = String(decodedText || '').trim();
+                    if (!code) return;
+                    boletoScanLocked = true;
+                    boletoDetectedFormat = decodedResult?.result?.format?.formatName || '';
+                    handleBoletoScan(code);
+                };
+
+                const onScanFailure = () => {};
+                await scanner.start(
+                    { facingMode: { exact: 'environment' } },
+                    scanConfig,
+                    onScanSuccess,
+                    onScanFailure
+                );
+
+                if (session !== boletoScanSession || scannerModal.classList.contains('hidden')) {
+                    await stopBoletoScanner();
+                    return;
+                }
+
+                boletoScannerStarting = false;
+                boletoScannerRunning = true;
+            } catch (error) {
+                console.warn('Falha ao iniciar a câmera:', error);
+                boletoScannerStarting = false;
+                boletoScannerRunning = false;
+                await stopBoletoScanner();
+                forceStopBoletoVideo();
+                reader.innerHTML = '';
+                if (!scannerModal.classList.contains('hidden')) {
+                    triggerToast('Não foi possível iniciar a câmera. Feche outras câmeras e tente novamente.', 'error');
+                }
+            }
+        }
+
+        function openNativeBoletoCamera() {
+            const input = document.getElementById('boleto-camera-file');
+            const scannerModal = document.getElementById('barcode-scanner-modal');
+            if (!input) {
+                triggerToast('Câmera indisponível neste navegador. Digite o código manualmente.', 'error');
+                return;
+            }
+
+            input.value = '';
+            input.onchange = async function() {
+                const file = input.files && input.files[0];
+                if (!file) return;
+
+                if (typeof Html5Qrcode === 'undefined') {
+                    triggerToast('Leitor indisponível. Digite o código manualmente.', 'error');
+                    return;
+                }
+
+                const tempId = 'boleto-file-reader-' + Date.now();
+                const temp = document.createElement('div');
+                temp.id = tempId;
+                temp.className = 'hidden';
+                document.body.appendChild(temp);
+
+                const fileScanner = new Html5Qrcode(tempId, { verbose: false });
+                try {
+                    const decodedText = await fileScanner.scanFile(file, true);
+                    const code = String(decodedText || '').trim();
+                    if (!code) throw new Error('Código vazio');
+
+                    // Mantém a tela do leitor aberta e mostra o código encontrado. O usuário
+                    // decide quando confirmar em “Usar este código”.
+                    if (scannerModal) scannerModal.classList.remove('hidden');
+                    handleBoletoScan(code);
+                } catch (err) {
+                    console.warn('Não foi possível ler a foto do código:', err);
+                    triggerToast('Não consegui ler o código. Tente aproximar e tirar outra foto.', 'error');
+                } finally {
+                    try { fileScanner.clear(); } catch (_) {}
+                    temp.remove();
+                }
+            };
+
+            input.click();
+        }
+
+        function handleBoletoScan(decodedText) {
+            const code = String(decodedText || '').trim();
+            if (!code || boletoDetectedCode) return;
+
+            boletoDetectedCode = code;
+            const detectedValue = document.getElementById('barcode-detected-value');
+            const detectedBox = document.getElementById('barcode-detected-box');
+            const scanStatus = document.getElementById('barcode-scan-status');
+            const reader = document.getElementById('barcode-reader');
+
+            if (detectedValue) detectedValue.textContent = code;
+            if (detectedBox) detectedBox.classList.remove('hidden');
+            if (scanStatus) scanStatus.textContent = 'Código encontrado. A câmera foi pausada. Toque em “Usar este código”.';
+
+            // Interrompe o vídeo e limpa o renderizador imediatamente. A tela do leitor
+            // continua aberta, mas o processamento da câmera é encerrado para liberar memória.
+            stopBoletoScanner().then(() => {
+                if (reader && boletoDetectedCode === code) {
+                    reader.innerHTML = `
+                        <div class="min-h-[310px] rounded-2xl bg-zinc-950 border border-zinc-800 flex flex-col items-center justify-center p-6 text-center">
+                            <div class="w-16 h-16 rounded-full bg-nu-green/15 text-nu-green flex items-center justify-center mb-4">
+                                <i class="fa-solid fa-check text-2xl"></i>
+                            </div>
+                            <div class="text-white font-semibold">Código identificado</div>
+                            <div class="text-xs text-nu-textMuted mt-2 break-all leading-relaxed">${escapeHtml(code)}</div>
+                        </div>`;
+                }
+            });
+        }
+
+        async function stopBoletoScanner() {
+            const scanner = boletoScanner;
+            boletoScanner = null;
+            boletoScannerRunning = false;
+            boletoScannerStarting = false;
+
+            if (scanner) {
+                try { await scanner.stop(); } catch (_) {}
+                try { scanner.clear(); } catch (_) {}
+            }
+
+            // Fallback de segurança: garante que nenhum MediaStream continue vivo.
+            forceStopBoletoVideo();
+        }
+
+        async function confirmDetectedBoletoCode() {
+            const code = String(boletoDetectedCode || '').trim();
+            if (!code) {
+                triggerToast('Nenhum código foi identificado ainda.', 'error');
+                return;
+            }
+
+            boletoScanLocked = true;
+            boletoScanSession += 1;
+            await stopBoletoScanner();
+
+            const scannerModal = document.getElementById('barcode-scanner-modal');
+            if (scannerModal) scannerModal.classList.add('hidden');
+            const reader = document.getElementById('barcode-reader');
+            if (reader) reader.innerHTML = '';
+            forceStopBoletoVideo();
+
+            // Abre a página de pagamento com o código já preenchido.
+            showBoletoDetailsPage(code);
+        }
+
+        function showBoletoDetailsPage(code) {
+            const normalizedCode = String(code || '').trim();
+            modalTitle.innerText = 'Pagamento do boleto';
+            modalDesc.innerText = 'Confira o código, informe a conta e o valor.';
+            modalIcon.className = 'fa-solid fa-barcode';
+            document.getElementById('modal-body').innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-300 mb-1">Código de barras / QR Code</label>
+                        <div class="relative">
+                            <input id="boleto-code" type="text" value="${escapeHtml(normalizedCode)}" readonly class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 pr-12 text-white text-sm leading-relaxed">
+                            <i class="fa-solid fa-circle-check absolute right-4 top-1/2 -translate-y-1/2 text-nu-green"></i>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-300 mb-1">Produto / conta</label>
+                        <input id="boleto-product" type="text" placeholder="Ex.: Conta de energia" autocomplete="off" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:border-nu-purple">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-300 mb-1">Valor (R$)</label>
+                        <input id="boleto-amount" type="number" placeholder="0,00" min="0.01" step="0.01" inputmode="decimal" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-xl font-semibold focus:border-nu-purple">
+                    </div>
+                </div>`;
+
+            modalConfirmBtn.innerText = 'Revisar pagamento';
+            modalConfirmBtn.onclick = reviewBoletoPayment;
+            appModal.classList.remove('hidden');
+
+            setTimeout(() => document.getElementById('boleto-product')?.focus(), 50);
+        }
+
+        async function closeBoletoScanner(silent = false) {
+            boletoScanSession += 1;
+            boletoScanLocked = true;
+            const scannerModal = document.getElementById('barcode-scanner-modal');
+            if (scannerModal) scannerModal.classList.add('hidden');
+
+            await stopBoletoScanner();
+            boletoDetectedCode = '';
+            boletoDetectedFormat = '';
+
+            if (!silent) {
+                const reader = document.getElementById('barcode-reader');
+                if (reader) reader.innerHTML = '';
+            }
+            forceStopBoletoVideo();
+        }
+
+        function reviewBoletoPayment() {
+            const code = (document.getElementById('boleto-code')?.value || '').trim();
+            const amountRaw = (document.getElementById('boleto-amount')?.value || '').trim();
+            const amount = parseFloat(amountRaw);
+            const product = (document.getElementById('boleto-product')?.value || 'Pagamento de boleto').trim();
+
+            if (!code || !amountRaw || !product) {
+                triggerToast('É obrigatório informar o código e o valor do boleto.', 'error');
+                return;
+            }
+
+            if (isNaN(amount) || amount <= 0) {
+                triggerToast('Digite um valor maior que zero.', 'error');
+                return;
+            }
+
+            if (amount > state.accountBalance) {
+                triggerToast('Saldo insuficiente para pagar este boleto.', 'error');
+                return;
+            }
+
+            modalTitle.innerText = "Revisar pagamento";
+            modalDesc.innerText = "Confira o código, a cobrança e o valor antes de confirmar.";
+            modalIcon.className = "fa-solid fa-barcode";
+            document.getElementById('modal-body').innerHTML = `
+                <div class="bg-zinc-800/80 rounded-2xl p-4 space-y-4 border border-zinc-700">
+                    <div class="flex justify-between items-start gap-4">
+                        <div>
+                            <div class="text-[10px] text-nu-textMuted uppercase">Pagamento de boleto</div>
+                            <div class="text-sm font-semibold text-white mt-1">${escapeHtml(product)}</div>
+                        </div>
+                        <div class="w-10 h-10 rounded-full bg-nu-purple/20 text-nu-purpleLight flex items-center justify-center">
+                            <i class="fa-solid fa-barcode"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-nu-textMuted uppercase">Código</div>
+                        <div class="text-xs font-medium text-white mt-1 break-all leading-relaxed">${escapeHtml(code)}</div>
+                    </div>
+                    <div class="pt-3 border-t border-zinc-700 flex justify-between items-center">
+                        <span class="text-xs text-nu-textMuted">Valor</span>
+                        <span class="text-xl font-bold text-white">R$ ${formatBRL(amount)}</span>
+                    </div>
+                </div>`;
+
+            modalConfirmBtn.innerText = "Confirmar pagamento";
+            modalConfirmBtn.onclick = () => {
+                closeModal();
+                openPinModal(() => {
+                    state.accountBalance -= amount;
+                    const now = new Date();
+                    state.transactions.unshift({
+                        id: Date.now(),
+                        title: 'Boleto pago',
+                        desc: product,
+                        amount,
+                        type: 'out',
+                        date: 'Hoje',
+                        name: product,
+                        institution: 'Cobrança simulada',
+                        pixKey: code,
+                        timestamp: now.getTime(),
+                        day: now.toLocaleDateString('pt-BR'),
+                        time: now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
+                    });
+                    renderState();
+                    openReceipt(amount, code, product, 'Cobrança simulada');
+                    triggerToast('Boleto pago com sucesso');
+                });
+            };
+        }
+
+        function openDepositModal() {
+            openModal("Depositar Dinheiro", "Digite o valor a ser depositado.", "fa-solid fa-arrow-down", () => {
+                const amount = parseFloat(modalAmountInput.value);
+                if (isNaN(amount) || amount <= 0) {
+                    showAlertSheet("Valor Inválido", "Digite um valor válido.");
+                    return;
+                }
+                state.accountBalance += amount;
+                const now = new Date();
+                state.transactions.unshift({id:Date.now(), title:"Dinheiro recebido", desc:"Depósito simulado", amount, type:"in", date:"Hoje", name:state.userName, institution:"Depósito simulado", pixKey:"—", timestamp:now.getTime(), day:now.toLocaleDateString("pt-BR"), time:now.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})});
+                renderState();
+                closeModal();
+                triggerToast(`Depósito de R$ ${formatBRL(amount)} efetuado!`);
+            });
+        }
+
+        function openTransferModal() {
+            // Fluxo próprio de transferência bancária: não reutiliza a interface nem a mecânica do Pix.
+            modalTitle.innerText = "Transferir dinheiro";
+            modalDesc.innerText = "Preencha os dados bancários do destinatário.";
+            modalIcon.className = "fa-solid fa-building-columns";
+            document.getElementById('modal-body').innerHTML = `
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-300 mb-1">Nome do titular</label>
+                        <input id="transfer-name" type="text" placeholder="Nome completo" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:border-nu-purple">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-300 mb-1">Banco / Instituição</label>
+                        <input id="transfer-bank" type="text" placeholder="Nome do banco" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:border-nu-purple">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-300 mb-1">Agência</label>
+                            <input id="transfer-agency" type="text" inputmode="numeric" placeholder="0000" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:border-nu-purple">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-300 mb-1">Conta</label>
+                            <input id="transfer-account" type="text" inputmode="numeric" placeholder="00000-0" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:border-nu-purple">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-300 mb-1">CPF / CNPJ</label>
+                        <input id="transfer-document" type="text" inputmode="numeric" placeholder="Documento do titular" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-sm focus:border-nu-purple">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-300 mb-1">Valor da transferência</label>
+                        <input id="transfer-amount" type="number" placeholder="0,00" min="0.01" step="0.01" class="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-3.5 text-white text-xl font-semibold focus:border-nu-purple">
+                    </div>
+                </div>`;
+
+            modalConfirmBtn.innerText = "Revisar transferência";
+            modalConfirmBtn.onclick = () => {
+                const name = document.getElementById('transfer-name').value.trim();
+                const bank = document.getElementById('transfer-bank').value.trim();
+                const agency = document.getElementById('transfer-agency').value.trim();
+                const account = document.getElementById('transfer-account').value.trim();
+                const documentNumber = document.getElementById('transfer-document').value.trim();
+                const amountRaw = document.getElementById('transfer-amount').value.trim();
+                const amount = parseFloat(amountRaw);
+
+                if (!name || !bank || !agency || !account || !documentNumber || !amountRaw) {
+                    triggerToast('É obrigatório preencher todos os campos da transferência.', 'error');
+                    return;
+                }
+                if (isNaN(amount) || amount <= 0) {
+                    triggerToast('Digite um valor maior que zero.', 'error');
+                    return;
+                }
+                if (amount > state.accountBalance) {
+                    triggerToast('Saldo insuficiente para realizar a transferência.', 'error');
+                    return;
+                }
+
+                // Segunda etapa: revisão própria da transferência bancária.
+                modalTitle.innerText = "Revisar transferência";
+                modalDesc.innerText = "Confira os dados bancários antes de confirmar.";
+                modalIcon.className = "fa-solid fa-building-columns";
+                document.getElementById('modal-body').innerHTML = `
+                    <div class="bg-zinc-800/80 rounded-2xl p-4 space-y-4 border border-zinc-700">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-[10px] text-nu-textMuted uppercase">Transferência bancária</div>
+                                <div class="text-base font-semibold text-white mt-1">${escapeHtml(name)}</div>
+                            </div>
+                            <div class="w-10 h-10 rounded-full bg-nu-purple/20 text-nu-purpleLight flex items-center justify-center">
+                                <i class="fa-solid fa-building-columns"></i>
+                            </div>
+                        </div>
+                        <div class="space-y-3 text-xs">
+                            <div class="flex justify-between gap-4"><span class="text-nu-textMuted">Banco</span><span class="font-medium text-white text-right">${escapeHtml(bank)}</span></div>
+                            <div class="flex justify-between gap-4"><span class="text-nu-textMuted">Agência</span><span class="font-medium text-white text-right">${escapeHtml(agency)}</span></div>
+                            <div class="flex justify-between gap-4"><span class="text-nu-textMuted">Conta</span><span class="font-medium text-white text-right">${escapeHtml(account)}</span></div>
+                            <div class="flex justify-between gap-4"><span class="text-nu-textMuted">CPF / CNPJ</span><span class="font-medium text-white text-right break-all">${escapeHtml(documentNumber)}</span></div>
+                        </div>
+                        <div class="pt-3 border-t border-zinc-700 flex justify-between items-center">
+                            <span class="text-xs text-nu-textMuted">Valor</span>
+                            <span class="text-xl font-bold text-white">R$ ${formatBRL(amount)}</span>
+                        </div>
+                    </div>`;
+
+                modalConfirmBtn.innerText = "Confirmar transferência";
+                modalConfirmBtn.onclick = () => {
+                    closeModal();
+                    openPinModal(() => {
+                        state.accountBalance -= amount;
+                        const now = new Date();
+                        state.transactions.unshift({
+                            id: Date.now(),
+                            title: 'Transferência enviada',
+                            desc: `${bank} • Conta ${account}`,
+                            amount,
+                            type: 'out',
+                            date: 'Hoje',
+                            name,
+                            institution: bank,
+                            pixKey: `Agência ${agency} • Conta ${account}`,
+                            timestamp: now.getTime(),
+                            day: now.toLocaleDateString('pt-BR'),
+                            time: now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})
+                        });
+                        renderState();
+                        openReceipt(amount, `Agência ${agency} • Conta ${account}`, name, bank);
+                        triggerToast('Transferência concluída', 'success');
+                    });
+                };
+            };
+
+            appModal.classList.remove('hidden');
+        }
+
+        function openCofrinhoModal() {
+            closeModal();
+            openPinModal(() => openCofrinhoScreen());
+        }
+
+        function openCofrinhoScreen() {
+            const screen = document.getElementById("cofrinho-screen");
+            if (!screen) return;
+            document.getElementById("cofrinho-balance").innerText = formatBRL(state.savingsBalance);
+            screen.classList.remove("hidden");
+            screen.classList.add("flex");
+        }
+
+        function closeCofrinhoScreen() {
+            const screen = document.getElementById("cofrinho-screen");
+            screen.classList.add("hidden");
+            screen.classList.remove("flex");
+        }
+
+        function openCofrinhoSave() {
+            openModal("Guardar no Cofrinho", "Digite quanto você quer guardar.", "fa-solid fa-piggy-bank", () => {
+                const amount = parseFloat(modalAmountInput.value);
+                if (isNaN(amount) || amount <= 0) {
+                    showAlertSheet("Valor inválido", "Digite um valor maior que zero.");
+                    return;
+                }
+                if (amount > state.accountBalance) {
+                    showAlertSheet("Saldo insuficiente", "Você não tem saldo suficiente em conta.");
+                    return;
+                }
+                closeModal();
+                openPinModal(() => {
+                    state.accountBalance -= amount;
+                    state.savingsBalance += amount;
+                    renderState();
+                    document.getElementById("cofrinho-balance").innerText = formatBRL(state.savingsBalance);
+                    triggerToast(`Valor de R$ ${formatBRL(amount)} foi guardado no cofrinho`);
+                });
+            });
+        }
+
+        function openCofrinhoWithdraw() {
+            if (state.savingsBalance <= 0) {
+                showAlertSheet("Cofrinho vazio", "Não há dinheiro disponível para retirar.");
+                return;
+            }
+            openModal("Retirar do Cofrinho", "Digite quanto você quer retirar.", "fa-solid fa-arrow-down", () => {
+                const amount = parseFloat(modalAmountInput.value);
+                if (isNaN(amount) || amount <= 0) {
+                    showAlertSheet("Valor inválido", "Digite um valor maior que zero.");
+                    return;
+                }
+                if (amount > state.savingsBalance) {
+                    showAlertSheet("Saldo insuficiente", "O valor informado é maior que o saldo do cofrinho.");
+                    return;
+                }
+                closeModal();
+                openPinModal(() => {
+                    state.savingsBalance -= amount;
+                    state.accountBalance += amount;
+                    renderState();
+                    document.getElementById("cofrinho-balance").innerText = formatBRL(state.savingsBalance);
+                    triggerToast(`Você retirou R$ ${formatBRL(amount)} do cofrinho`);
+                });
+            });
+        }
+
+        function openLoanModal() {
+            showAlertSheet("Empréstimo Pré-Aprovado", "Você tem R$ 15.000,00 disponíveis para contratação imediata.");
+        }
+
+        function payCreditInvoice() {
+            if (state.creditInvoice <= 0) {
+                showAlertSheet("Fatura Zerada", "Sua fatura já está quitada.");
+                return;
+            }
+            if (state.accountBalance < state.creditInvoice) {
+                showAlertSheet("Saldo Insuficiente", "Saldo em conta é menor que o valor total da fatura.");
+                return;
+            }
+
+            const paid = state.creditInvoice;
+            openPinModal(() => {
+                state.accountBalance -= paid;
+                state.creditLimit += paid;
+                state.creditInvoice = 0;
+                renderState();
+                openReceipt(paid, "Fatura Cartão Nubank");
+            });
+        }
+
+        let pixSuccessData = null;
+
+        function openPixSuccess(amount, destKey, destName, destBank) {
+            const now = new Date();
+            pixSuccessData = { amount, destKey, destName, destBank, timestamp: now.getTime() };
+
+            const modal = document.getElementById('pix-success-modal');
+            document.getElementById('pix-success-name').innerText = destName || 'Destinatário Simulado';
+            document.getElementById('pix-success-amount').innerText = formatBRL(amount);
+            document.getElementById('pix-success-when').innerText = 'Agora';
+
+            modal.classList.remove('hidden');
+            modal.scrollTop = 0;
+        }
+
+        function closePixSuccess() {
+            document.getElementById('pix-success-modal').classList.add('hidden');
+            pixSuccessData = null;
+        }
+
+        function openPixReceiptFromSuccess() {
+            if (!pixSuccessData) return;
+
+            const data = pixSuccessData;
+            document.getElementById('pix-success-modal').classList.add('hidden');
+            openReceipt(data.amount, data.destKey, data.destName, data.destBank);
+        }
+
+        function openReceipt(amount, destKey, destName = "Destinatário Simulado", destBank = "Instituição simulada") {
+            document.getElementById('receipt-date').innerText = new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+            document.getElementById('receipt-amount').innerText = formatBRL(amount);
+            // Preenche o comprovante com os dados reais informados no fluxo da operação.
+            document.getElementById('receipt-dest-key').innerText = destKey || 'Não informado';
+            document.getElementById('receipt-dest-name').innerText = destName || 'Destinatário Simulado';
+            document.getElementById('receipt-dest-institution').innerText = destBank || 'Instituição simulada';
+            document.getElementById('receipt-orig-name').innerText = state.userName;
+            document.getElementById('receipt-orig-institution').innerText = 'NU PAGAMENTOS S.A';
+            document.getElementById('receipt-auth-id').innerText = "SIM-" + Date.now();
+            const receipt = document.getElementById('receipt-modal');
+            receiptShareFile = null;
+            receipt.classList.remove('hidden');
+            receipt.classList.add('flex');
+            receipt.scrollTop = 0;
+            requestAnimationFrame(() => { prepareReceiptShare(); });
+        }
+
+        let receiptShareFile = null;
+        let receiptSharePreparing = false;
+
+        async function prepareReceiptShare() {
+            const content = document.getElementById('receipt-share-content');
+            const shareButton = document.getElementById('receipt-share-button');
+            if (!content || typeof window.html2canvas !== 'function') return false;
+            if (receiptSharePreparing) return false;
+
+            receiptSharePreparing = true;
+            if (shareButton) {
+                shareButton.disabled = true;
+                shareButton.style.opacity = '0.6';
+            }
+
+            try {
+                // Captura SOMENTE o conteúdo do comprovante.
+                // O cabeçalho com X/Enviar e o restante do aplicativo ficam fora desta área.
+                // Cria uma cópia exclusiva para compartilhamento e remove
+                // qualquer elemento marcado para não aparecer na imagem.
+                const shareClone = content.cloneNode(true);
+                shareClone.querySelectorAll('[data-share-exclude="true"]').forEach(el => el.remove());
+                shareClone.style.position = 'fixed';
+                shareClone.style.left = '-100000px';
+                shareClone.style.top = '0';
+                shareClone.style.width = content.getBoundingClientRect().width + 'px';
+                shareClone.style.maxWidth = 'none';
+                shareClone.style.height = 'auto';
+                shareClone.style.overflow = 'visible';
+                shareClone.style.background = '#000000';
+                shareClone.style.zIndex = '-1';
+                document.body.appendChild(shareClone);
+
+                let canvas;
+                try {
+                    canvas = await window.html2canvas(shareClone, {
+                        backgroundColor: '#000000',
+                        scale: Math.min(window.devicePixelRatio || 1, 2),
+                        useCORS: true,
+                        logging: false,
+                        scrollX: 0,
+                        scrollY: 0,
+                        windowWidth: shareClone.scrollWidth,
+                        windowHeight: shareClone.scrollHeight
+                    });
+                } finally {
+                    shareClone.remove();
+                }
+
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1));
+                if (!blob) throw new Error('Não foi possível gerar a imagem do comprovante.');
+
+                receiptShareFile = new File([blob], 'comprovante-simulacao.png', { type: 'image/png' });
+                return true;
+            } catch (err) {
+                receiptShareFile = null;
+                console.error('Erro ao preparar comprovante:', err);
+                return false;
+            } finally {
+                receiptSharePreparing = false;
+                if (shareButton) {
+                    shareButton.disabled = false;
+                    shareButton.style.opacity = '';
+                }
+            }
+        }
+
+        async function shareReceipt() {
+            const content = document.getElementById('receipt-share-content');
+            if (!content) {
+                triggerToast('Não foi possível preparar o comprovante', 'error');
+                return;
+            }
+
+            // Garante que exista uma imagem pronta para o compartilhamento.
+            if (!receiptShareFile) {
+                const ready = await prepareReceiptShare();
+                if (!ready || !receiptShareFile) {
+                    triggerToast('Não foi possível preparar o comprovante', 'error');
+                    return;
+                }
+            }
+
+            const file = receiptShareFile;
+            try {
+                if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Comprovante'
+                    });
+                    return;
+                }
+
+                // Fallback: abre SOMENTE a imagem do comprovante.
+                const imageUrl = URL.createObjectURL(file);
+                const win = window.open(imageUrl, '_blank');
+                if (!win) {
+                    const link = document.createElement('a');
+                    link.href = imageUrl;
+                    link.download = 'comprovante-simulacao.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    triggerToast('Comprovante pronto para compartilhar', 'success');
+                }
+                setTimeout(() => URL.revokeObjectURL(imageUrl), 60000);
+            } catch (error) {
+                if (error && error.name === 'AbortError') return;
+                console.error('Erro ao compartilhar comprovante:', error);
+                triggerToast('Não foi possível enviar o comprovante', 'error');
+            }
+        }
+
+        function closeReceiptModal() {
+            const receipt = document.getElementById('receipt-modal');
+            receipt.classList.add('hidden');
+            receipt.classList.remove('flex');
+        }
+
+        function openProfileModal() {
+            document.getElementById('edit-user-name').value = state.userName;
+            document.getElementById('edit-user-pin').value = state.userPin;
+            document.getElementById('edit-account-balance').value = state.accountBalance;
+            document.getElementById('edit-credit-invoice').value = state.creditInvoice;
+            document.getElementById('edit-savings-balance').value = state.savingsBalance;
+            document.getElementById('profile-modal').classList.remove('hidden');
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profile-modal').classList.add('hidden');
+        }
+
+        function saveProfileChanges() {
+            const newPin = document.getElementById('edit-user-pin').value.trim();
+            if (newPin.length !== 4 || isNaN(newPin)) {
+                showAlertSheet("Senha Inválida", "A senha precisa ter exatamente 4 números.");
+                return;
+            }
+
+            state.userName = document.getElementById('edit-user-name').value || "Gabriel Silva";
+            state.userPin = newPin;
+            state.accountBalance = parseFloat(document.getElementById('edit-account-balance').value) || 0;
+            state.creditInvoice = parseFloat(document.getElementById('edit-credit-invoice').value) || 0;
+            state.savingsBalance = parseFloat(document.getElementById('edit-savings-balance').value) || 0;
+            renderState();
+            closeProfileModal();
+            triggerToast("Dados e senha salvos com sucesso!");
+        }
+
+        function openTransactionsHistory() {
+            const list = document.getElementById("history-list");
+            list.innerHTML = "";
+            if (!state.transactions.length) {
+                list.innerHTML = `<div class="text-center text-sm text-nu-textMuted py-10">Nenhuma movimentação encontrada.</div>`;
+            } else {
+                state.transactions.forEach(t => {
+                    const isInc = t.type === "in";
+                    const div = document.createElement("button");
+                    div.type = "button";
+                    div.className = "w-full text-left bg-zinc-900 p-3.5 rounded-2xl flex items-center justify-between border border-zinc-800 hover:bg-zinc-800 transition";
+                    div.onclick = () => openTransactionDetails(t);
+                    div.innerHTML = `
+                        <div class="flex items-center space-x-3 min-w-0">
+                            <div class="w-9 h-9 rounded-full ${isInc ? "bg-nu-green/10 text-nu-green" : "bg-zinc-800 text-gray-300"} flex items-center justify-center shrink-0">
+                                <i class="fa-solid ${isInc ? "fa-arrow-down" : "fa-arrow-up"} text-xs"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-xs font-semibold text-white truncate">${t.title}</div>
+                                <div class="text-[10px] text-nu-textMuted truncate">${t.name || t.desc || "Movimentação"} • ${t.day || t.date || ""}</div>
+                            </div>
+                        </div>
+                        <div class="text-xs font-bold ${isInc ? "text-nu-green" : "text-white"} whitespace-nowrap ml-3">
+                            ${isInc ? "+" : "-"} R$ ${formatBRL(Number(t.amount) || 0)}
+                        </div>`;
+                    list.appendChild(div);
+                });
+            }
+            document.getElementById("history-modal").classList.remove("hidden");
+        }
+
+        function openTransactionDetails(t) {
+            const isInc = t.type === "in";
+            document.getElementById("transaction-detail-type").innerText = isInc ? "Dinheiro recebido" : "Dinheiro enviado";
+            document.getElementById("transaction-detail-amount").innerText = (isInc ? "+ R$ " : "- R$ ") + formatBRL(Number(t.amount) || 0);
+            document.getElementById("transaction-detail-name").innerText = t.name || t.desc || "Não informado";
+            document.getElementById("transaction-detail-institution").innerText = t.institution || "Não informado";
+            document.getElementById("transaction-detail-key").innerText = t.pixKey || t.desc || "Não informado";
+            document.getElementById("transaction-detail-day").innerText = t.day || t.date || "Não informado";
+            document.getElementById("transaction-detail-time").innerText = t.time || "Não informado";
+            document.getElementById("transaction-detail-modal").classList.remove("hidden");
+        }
+
+        function closeTransactionDetails() {
+            document.getElementById("transaction-detail-modal").classList.add("hidden");
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('history-modal').classList.add('hidden');
+        }
+
+        function openVirtualCardModal() { document.getElementById('card-modal').classList.remove('hidden'); }
+        function closeVirtualCardModal() { document.getElementById('card-modal').classList.add('hidden'); }
+
+        window.onload = function() { renderState(); };
+    </script>
+
+<script>
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); });
+}
+</script>
+
+</body>
+</html>
